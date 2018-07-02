@@ -5,6 +5,8 @@ const jwt = require('jsonwebtoken');//jsonwebtoken for authentication
 const User = require('../models/user')//call the Schema for a new user
 const mongoose = require('mongoose')
 const db = "mongodb://Cotelette:a123456@ds141870.mlab.com:41870/socialnetwork"//cfg.db//api for connecting the database with the admin users
+const app = require('express')();
+const server = require('http').Server(app); //protocole http pour démarrer avec socket io
 const socket = require('socket.io')(server);
 const mongodb = require('mongodb');//call to store messages in the database
 
@@ -22,8 +24,8 @@ mongoose.connect(db, err => {
         console.log('connection to mongodb passed')//if the connection is alright, this is displayed into the terminal window
     }
 
-  !  users = db.collection("users"); // getting the users collection
-  !  chatRooms = db.collection("chatRooms"); /* getting the chatRooms collection. This collection would store chats in that room*/
+  //  users = db.collection("users"); // getting the users collection
+  //  chatRooms = db.collection("chatRooms"); /* getting the chatRooms collection. This collection would store chats in that room*/
 
   const io = socket.listen(server);//connection avec socket io
   /* 'connection' is a socket.io event that is triggered when a new connection is
