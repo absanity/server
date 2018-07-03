@@ -172,14 +172,22 @@ router.get('/special', verifyToken, (req, res) => {
 
 //API FOR REGISTER
 router.post('/register', (req, res) => {
-    let userData = req.body//extract the user data from the object front
-    let user = new User(userData)//convert the userData into the model we spacified in mongoose
+    let userData = {
+      email: req.body.email,
+      password: req.body.password,
+      pseudo: req.body.pseudo,
+      role: 1,
+      avatar: "https://api.adorable.io/avatars/80" + req.body.pseudo
+    }//extract the user data from the object front
+    //let user = new User(userData)//convert the userData into the model we specified in mongoose
+    console.log('hello')
     console.log(userData)//object type with email and Password
-
+return;
     user.save((error, registerUser) => {
         if (error) {
-            console.log(err)
+            console.log(error)
         } else {
+            //console.log(registerUser)
             let payload = {subject: registerUser._id}
             let token = jwt.sign(payload, 'thisIsASecretKey')
             res.status(200).send({token})
