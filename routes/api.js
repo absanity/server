@@ -103,8 +103,26 @@ router.get('/home', (req, res) => {
 })
 
 //Profil Route
-router.get('/profil', (req,res) => {
-  res.send('profil')
+router.get('/profil', verifyToken, (req,res) => {
+  var token = req.headers['x-access-token'];
+  if (!token) return res.status(401).send({ auth: false, message: 'No token provided.' });
+
+  jwt.verify(token, config.secret, function(err, decoded) {
+    if (err) return res.status(500).send({ auth: false, message: 'Failed to authenticate token.' });
+
+    res.status(200).send(decoded);
+  });
+  /*
+  let profil =
+      {
+        "email": "rourou@mail.com",
+        "password": "123",
+        "pseudo": "rourou",
+        "role": 1,
+        "avatar": "https://api.adorable.io/avatars/80/rourou"
+      }
+  res.json(profil)
+  */
 })
 
 //Events route
@@ -177,17 +195,17 @@ router.post('/register', (req, res) => {
       password: req.body.password,
       pseudo: req.body.pseudo,
       role: 1,
-      avatar: "https://api.adorable.io/avatars/80" + req.body.pseudo
+      avatar: "https://api.adorable.io/avatars/80/" + req.body.pseudo
     }//extract the user data from the object front
-    //let user = new User(userData)//convert the userData into the model we specified in mongoose
+    let user = new User(userData)//convert the userData into the model we specified in mongoose
     console.log('hello')
     console.log(userData)//object type with email and Password
-return;
+//return;
     user.save((error, registerUser) => {
         if (error) {
             console.log(error)
         } else {
-            //console.log(registerUser)
+            console.log(registerUser)
             let payload = {subject: registerUser._id}
             let token = jwt.sign(payload, 'thisIsASecretKey')
             res.status(200).send({token})
@@ -220,6 +238,8 @@ router.post('/login', (req, res) => {
         }//fin else
     })//fin findOne user
 })//fin login
+
+
 
 ///
 
