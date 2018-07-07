@@ -10,6 +10,7 @@ const server = require('http').Server(app); //protocole http pour démarrer avec
 const socket = require('socket.io')(server);
 const mongodb = require('mongodb');//call to store messages in the database
 
+
 ///VARIABLES USED FOR THE CHAT APP///
 let users;
 let count;
@@ -198,14 +199,18 @@ router.post('/register', (req, res) => {
       avatar: "https://api.adorable.io/avatars/80/" + req.body.pseudo
     }//extract the user data from the object front
     let user = new User(userData)//convert the userData into the model we specified in mongoose
-    console.log('hello')
-    console.log(userData)//object type with email and Password
+    //console.log('hello')
+    //console.log(userData)//object type with email and Password
 //return;
     user.save((error, registerUser) => {
         if (error) {
-            console.log(error)
+            console.log(error.message)
+            if(error.message == 'User validation failed: pseudo: Path `pseudo` is required.'){
+
+            }
         } else {
             console.log(registerUser)
+
             let payload = {subject: registerUser._id}
             let token = jwt.sign(payload, 'thisIsASecretKey')
             res.status(200).send({token})
@@ -227,13 +232,26 @@ router.post('/login', (req, res) => {
             if (!user) {//check if the user exists
                 res.status(401).send('Invalid email')
             } else {
+              ///////MODIF WITH Hash
+              User.comparePassword(password, function(err, isMatch){
+                if(isMatch && isMatch == true){
+                  let payload = {subject: user._id}
+                  let token = jwt.sign(payload, 'thisIsASecretKey')
+                  res.status(200).send({token})
+                }else{
+                  res.status(401).send('Invalid password')
+                }
+              })
+
+              ///////
+              /*
                 if (user.password !== userData.password) {//verify the password and email are matching one user
                     res.status(401).send('Invalid password')
                 } else {
                     let payload = {subject: user._id}
                     let token = jwt.sign(payload, 'thisIsASecretKey')
                     res.status(200).send({token})
-                }
+                }*/
             }//fin else
         }//fin else
     })//fin findOne user

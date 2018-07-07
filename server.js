@@ -1,6 +1,6 @@
 //Needed NPM packages
 const express = require('express');
-const app = require('express')();
+const app = express();
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const upload = require('./upload');
@@ -9,13 +9,12 @@ const api = require('./routes/api')// call to the module for routes api.js
 const server = require('http').Server(app); //protocole http pour démarrer avec socket io
 const io = require('socket.io')(server);
 const mongodb = require('mongodb');//call to store messages in the database
-
-
+const cookieParser = require('cookie-parser');
 
 //const app = express();
 app.use(cors());
 app.use(bodyParser.json());
-
+app.use(cookieParser())
 app.use('/api', api)
 app.get('/', function (req, res) {
     res.send('Cotelette is here')
