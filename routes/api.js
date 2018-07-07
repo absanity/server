@@ -9,6 +9,7 @@ const app = require('express')();
 const server = require('http').Server(app); //protocole http pour démarrer avec socket io
 const socket = require('socket.io')(server);
 const mongodb = require('mongodb');//call to store messages in the database
+const conversation = require('../models/conversation')// call the Schema for the conversation
 
 
 ///VARIABLES USED FOR THE CHAT APP///
@@ -24,55 +25,6 @@ mongoose.connect(db, err => {
     } else {
         console.log('connection to mongodb passed')//if the connection is alright, this is displayed into the terminal window
     }
-
-  //  users = db.collection("users"); // getting the users collection
-  //  chatRooms = db.collection("chatRooms"); /* getting the chatRooms collection. This collection would store chats in that room*/
-
-  const io = socket.listen(server);//connection avec socket io
-  /* 'connection' is a socket.io event that is triggered when a new connection is
-     made. Once a connection is made, callback is called. */
-  io.sockets.on('connection', (socket) => { /* socket object allows us to join specific clients
-                                              to chat rooms and also to catch
-                                              and emit the events.*/
-      // 'join event'
-      socket.on('join', (data) => {
-          socket.join(data.room);
-          chatRooms.find({}).toArray((err, rooms) => {
-              if(err){
-                  console.log(err);
-                  return false;
-              }
-              count = 0;
-              rooms.forEach((room) => {
-                  if(room.name == data.room){
-                      count++;
-                  }
-              });
-              // Create the chatRoom if not already created
-              if(count == 0) {
-                  chatRooms.insert({ name: data.room, messages: [] });
-              }
-          });
-      });
-      // catching the message event
-      socket.on('message', (data) => {
-          // emitting the 'new message' event to the clients in that room
-          io.in(data.room).emit('new message', {user: data.user, message: data.message});
-          // save the message in the 'messages' array of that chat-room
-          chatRooms.update({name: data.room}, { $push: { messages: { user: data.user, message: data.message } } }, (err, res) => {
-              if(err) {
-                  console.log(err);
-                  return false;
-              }
-          });
-      });
-      // Event when a client is typing
-      socket.on('typing', (data) => {
-          // Broadcasting to all the users except the one typing
-          socket.broadcast.in(data.room).emit('typing', {data: data, isTyping: true});
-      });
-  });
-
 })//end connection to mongo db
 
 //function to verify the token send from the browser
@@ -90,6 +42,7 @@ function verifyToken(req, res, next) {
     }// the variable payload is only valid if a value is set
     req.userId = payload.subject
     next()
+
 }
 
 //Default route
@@ -188,6 +141,21 @@ router.get('/special', verifyToken, (req, res) => {
     res.json(event)
 });
 
+///ROUTE FOR MESSAGES
+router.get('/messages', (req, res) => {
+  res.status(200);
+  ///Connection to socket io
+  io.on('connection', function(socket){
+    console.log('user connected');
+
+    socket.on('disconnect', function(){
+      console.log('User disconnected');
+    }); // end disconnect
+
+
+  });//end connection socket io
+})
+
 
 //API FOR REGISTER
 router.post('/register', (req, res) => {
@@ -232,8 +200,9 @@ router.post('/login', (req, res) => {
             if (!user) {//check if the user exists
                 res.status(401).send('Invalid email')
             } else {
+              console.log(userData)
               ///////MODIF WITH Hash
-              User.comparePassword(password, function(err, isMatch){
+              User.comparePassword(userData.password, function(err, isMatch){
                 if(isMatch && isMatch == true){
                   let payload = {subject: user._id}
                   let token = jwt.sign(payload, 'thisIsASecretKey')
