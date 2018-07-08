@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const cfg = require('../config/config');//path to the mongo connection
 const jwt = require('jsonwebtoken');//jsonwebtoken for authentication
+const bcrypt = require('bcryptjs')
 const User = require('../models/user')//call the Schema for a new user
 const mongoose = require('mongoose')
 const db = "mongodb://Cotelette:a123456@ds141870.mlab.com:41870/socialnetwork"//cfg.db//api for connecting the database with the admin users
@@ -200,27 +201,29 @@ router.post('/login', (req, res) => {
             if (!user) {//check if the user exists
                 res.status(401).send('Invalid email')
             } else {
-              console.log(userData)
+              console.log(user)
               ///////MODIF WITH Hash
-              User.comparePassword(userData.password, function(err, isMatch){
+              /*
+              user.comparePassword(user.password, function(err, isMatch){
                 if(isMatch && isMatch == true){
+                  console.log('comparison')
                   let payload = {subject: user._id}
                   let token = jwt.sign(payload, 'thisIsASecretKey')
                   res.status(200).send({token})
                 }else{
                   res.status(401).send('Invalid password')
                 }
-              })
-
-              ///////
-              /*
-                if (user.password !== userData.password) {//verify the password and email are matching one user
-                    res.status(401).send('Invalid password')
-                } else {
-                    let payload = {subject: user._id}
-                    let token = jwt.sign(payload, 'thisIsASecretKey')
-                    res.status(200).send({token})
-                }*/
+              })//end comparePassword
+              */
+              bcrypt.compare(userData.password, user.password, function(err, result){
+                if(err){
+                  console.log(err)
+                }else{
+                  let payload = {subject: user._id}
+                  let token = jwt.sign(payload, 'thisIsASecretKey')
+                  res.status(200).send({token})
+                }
+              })//end bcrypt
             }//fin else
         }//fin else
     })//fin findOne user

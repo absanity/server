@@ -45,7 +45,7 @@ userSchema.pre('save', function (next) {
 });
 
 
-userSchema.method.comparePassword = function(candidatePassword, callback){
+userSchema.methods.comparePassword = function(candidatePassword, callback){
   bcrypt.compare(candidatePassword, this.password, function(err, isMatch){
     if(err) return callback(err);
     callback(undefined, isMatch);
@@ -62,4 +62,5 @@ userSchema.methods.validPassword = function(password){
   return bcrypt.compareSync(password, this.password);
 }
 */
-module.exports = mongoose.model('User', userSchema, 'users')//export for the file user, with the schema for a user and the name of the collection created in mlab
+const User = mongoose.model('user', userSchema, 'users')
+module.exports = User//export for the file user, with the schema for a user and the name of the collection created in mlab
