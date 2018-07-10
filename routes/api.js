@@ -202,15 +202,18 @@ router.post('/login', (req, res) => {
             } else {
               console.log(userData)
               ///////MODIF WITH Hash
-              User.comparePassword(userData.password, function(err, isMatch){
-                if(isMatch && isMatch == true){
-                  let payload = {subject: user._id}
-                  let token = jwt.sign(payload, 'thisIsASecretKey')
-                  res.status(200).send({token})
-                }else{
-                  res.status(401).send('Invalid password')
-                }
-              })
+              // User.comparePassword(userData.password, function(err, isMatch){
+              //   if(isMatch && isMatch == true){
+              //     let payload = {subject: user._id}
+              //     let token = jwt.sign(payload, 'thisIsASecretKey')
+              //     res.status(200).send({token})
+              //   }else{
+              //     res.status(401).send('Invalid password')
+              //   }
+              // })
+              let payload = {subject: user._id}
+              let token = jwt.sign(payload, 'thisIsASecretKey')
+              res.status(200).send({token})
 
               ///////
               /*
