@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const cfg = require('../config/config');//path to the mongo connection
+// const cfg = require('../config/config');//path to the mongo connection
 const jwt = require('jsonwebtoken');//jsonwebtoken for authentication
 const bcrypt = require('bcryptjs')
 const User = require('../models/user')//call the Schema for a new user
