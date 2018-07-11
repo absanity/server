@@ -159,12 +159,6 @@ router.get('/messages', (req, res) => {
 
 router.post('/wall', (req, res) => {
     let o = req.body
-
-    console.log('--------------------------------');
-    console.log(req);
-    console.log('--------------------------------');
-    console.log(o);
-
     let wallData = {
       message: o.message
     }
@@ -176,6 +170,20 @@ router.post('/wall', (req, res) => {
         console.log(wallSaved);
     })
 
+})
+
+router.get('/wall', (req, res) => {
+
+  Wall.find({}, function(err, messages) {
+    console.log(messages);
+    var messageMap = {};
+
+    messages.forEach(function(message) {
+      messageMap[message._id] = message;
+    });
+
+    res.send(messageMap);
+  });
 })
 
 //API FOR REGISTER
