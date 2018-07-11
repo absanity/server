@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const cfg = require('../config/config');//path to the mongo connection
+// const cfg = require('../config/config');//path to the mongo connection
 const jwt = require('jsonwebtoken');//jsonwebtoken for authentication
 const User = require('../models/user')//call the Schema for a new user
+const Wall = require('../models/wall')//call the Schema for a new user
 const mongoose = require('mongoose')
 const db = "mongodb://Cotelette:a123456@ds141870.mlab.com:41870/socialnetwork"//cfg.db//api for connecting the database with the admin users
 const app = require('express')();
@@ -156,6 +157,26 @@ router.get('/messages', (req, res) => {
   });//end connection socket io
 })
 
+router.post('/wall', (req, res) => {
+    let o = req.body
+
+    console.log('--------------------------------');
+    console.log(req);
+    console.log('--------------------------------');
+    console.log(o);
+
+    let wallData = {
+      message: o.message
+    }
+
+    let wall = new Wall(wallData)
+    wall.save((error, wallSaved) => {
+        console.log('>>>>');
+        console.log(error);
+        console.log(wallSaved);
+    })
+
+})
 
 //API FOR REGISTER
 router.post('/register', (req, res) => {
@@ -189,45 +210,47 @@ router.post('/register', (req, res) => {
 
 //API FOR LOGIN
 router.post('/login', (req, res) => {
-  let userData = req.body//extract the user data when submitted
+    let userData = req.body//extract the user data when submitted
 
-  User.findOne({// searching in the database for a user
-    email: userData.email
-  }, (error, user) => {
-    if (error) {
-      console.log(error)
-    } else {
-      if (!user) {//check if the user exists
-        res.status(401).send('Invalid email')
-      } else {
-        console.log(userData)
-        ///////MODIF WITH Hash
-        // User.comparePassword(userData.password, function(err, isMatch){
-        //   if(isMatch && isMatch == true){
-        //     let payload = {subject: user._id}
-        //     let token = jwt.sign(payload, 'thisIsASecretKey')
-        //     res.status(200).send({token})
-        //   }else{
-        //     res.status(401).send('Invalid password')
-        //   }
-        // })
-        let payload = {subject: user._id}
-        let token = jwt.sign(payload, 'thisIsASecretKey')
-        res.status(200).send({token})
+    User.findOne({// searching in the database for a user
+        email: userData.email
+    }, (error, user) => {
+        if (error) {
+            console.log(error)
+        } else {
+            if (!user) {//check if the user exists
+                res.status(401).send('Invalid email')
+            } else {
+                console.log(userData)
+                ///////MODIF WITH Hash
+                // User.comparePassword(userData.password, function(err, isMatch){
+                //   if(isMatch && isMatch == true){
+                //     let payload = {subject: user._id}
+                //     let token = jwt.sign(payload, 'thisIsASecretKey')
+                //     res.status(200).send({token})
+                //   }else{
+                //     res.status(401).send('Invalid password')
+                //   }
+                // })
+                let payload = {subject: user._id}
+                let token = jwt.sign(payload, 'thisIsASecretKey')
+                res.status(200).send({token})
 
-        ///////
-        /*
-          if (user.password !== userData.password) {//verify the password and email are matching one user
-              res.status(401).send('Invalid password')
-          } else {
-              let payload = {subject: user._id}
-              let token = jwt.sign(payload, 'thisIsASecretKey')
-              res.status(200).send({token})
-          }*/
-      }//fin else
-    }//fin else
-  })//fin findOne user
+                ///////
+                /*
+                  if (user.password !== userData.password) {//verify the password and email are matching one user
+                      res.status(401).send('Invalid password')
+                  } else {
+                      let payload = {subject: user._id}
+                      let token = jwt.sign(payload, 'thisIsASecretKey')
+                      res.status(200).send({token})
+                  }*/
+            }//fin else
+        }//fin else
+    })//fin findOne user
 })//fin login
+
+
 
 
 
