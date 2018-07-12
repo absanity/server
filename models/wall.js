@@ -6,7 +6,18 @@ const wallSchema = new Schema({
     type: String,
     required: true,
     trim: true
-  }
+  },
+  created:  {
+    type: Date,
+    default: Date.now
+  },
+  userId:  {
+    type: String,
+    required: true,
+    trim: true
+  },
+  user: { type: Schema.Types.ObjectId, ref: 'user' }
+
 }, { collection: 'wall' });
 
 const Wall = mongoose.model('wall', wallSchema)

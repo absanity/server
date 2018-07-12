@@ -41,7 +41,7 @@ function verifyToken(req, res, next) {
   if (!payload) {
     return res.status(401).send('Ooops, unauthorized request')
   }// the variable payload is only valid if a value is set
-  req.userId = payload.subject
+  req.userId = payload.userId
   next()
 
 }
@@ -58,12 +58,12 @@ router.get('/home', (req, res) => {
 })
 
 //Profil Route
-router.get('/profil', verifyToken, (req,res) => {
+router.get('/profil', verifyToken, (req, res) => {
   var token = req.headers['x-access-token'];
-  if (!token) return res.status(401).send({ auth: false, message: 'No token provided.' });
+  if (!token) return res.status(401).send({auth: false, message: 'No token provided.'});
 
-  jwt.verify(token, config.secret, function(err, decoded) {
-    if (err) return res.status(500).send({ auth: false, message: 'Failed to authenticate token.' });
+  jwt.verify(token, config.secret, function (err, decoded) {
+    if (err) return res.status(500).send({auth: false, message: 'Failed to authenticate token.'});
 
     res.status(200).send(decoded);
   });
@@ -146,10 +146,10 @@ router.get('/special', verifyToken, (req, res) => {
 router.get('/messages', (req, res) => {
   res.status(200);
   ///Connection to socket io
-  io.on('connection', function(socket){
+  io.on('connection', function (socket) {
     console.log('user connected');
 
-    socket.on('disconnect', function(){
+    socket.on('disconnect', function () {
       console.log('User disconnected');
     }); // end disconnect
 
@@ -157,31 +157,45 @@ router.get('/messages', (req, res) => {
   });//end connection socket io
 })
 
-router.post('/wall', (req, res) => {
-    let o = req.body
-    let wallData = {
-      message: o.message
-    }
+router.post('/wall', verifyToken, (req, res) => {
+  console.log('post wall ....');
+  let o = req.body
+  console.log(o);
 
-    let wall = new Wall(wallData)
-    wall.save((error, wallSaved) => {
-        console.log('>>>>');
-        console.log(error);
-        console.log(wallSaved);
-    })
+  // User.findOne({email: 'ssisengrath2@hotmail.com'}).exec(function (err, oUser) {
+  //   console.log('****** User *****');
+  //   console.log(o);
+  //   console.log('===========');
+  // });
+
+  let token = req.headers.authorization.split(' ')[1]
+  let payload = jwt.verify(token, 'thisIsASecretKey')// return the decoded value only if it's valid
+  let wallData = {
+    message: o.message,
+    userId: payload.userId,
+    user: payload.userId,
+  }
+
+  let wall = new Wall(wallData)
+  wall.save((error, wallSaved) => {
+    res.send({});
+  })
 
 })
 
-router.get('/wall', (req, res) => {
+router.get('/wall', verifyToken, (req, res) => {
 
-  Wall.find({}, function(err, messages) {
-    console.log(messages);
+  // Wall.findOne({_id: '5b47de24b8d8fa169ebd2fb8'}).populate('user', 'email pseudo').exec(function (err, owall) {
+  //   console.log('***********');
+  //   console.log(owall);
+  //   console.log('===========');
+  // });
+
+  Wall.find({}).populate('user', 'email pseudo').sort({created: -1}).limit(20).exec(function (err, messages) {
     var messageMap = {};
-
-    messages.forEach(function(message) {
+    messages.forEach(function (message) {
       messageMap[message._id] = message;
     });
-
     res.send(messageMap);
   });
 })
@@ -193,22 +207,18 @@ router.post('/register', (req, res) => {
     password: req.body.password,
     pseudo: req.body.pseudo,
     role: 1,
-    avatar: "https://api.adorable.io/avatars/80/" + req.body.pseudo
+    avatar: "https://api.adorable.io/avatars/80/" + req.body.pseudo,
+    _id: new mongoose.Types.ObjectId(),
   }//extract the user data from the object front
   let user = new User(userData)//convert the userData into the model we specified in mongoose
-  //console.log('hello')
-  //console.log(userData)//object type with email and Password
-//return;
   user.save((error, registerUser) => {
     if (error) {
       console.log(error.message)
-      if(error.message == 'User validation failed: pseudo: Path `pseudo` is required.'){
+      if (error.message == 'User validation failed: pseudo: Path `pseudo` is required.') {
 
       }
     } else {
-      console.log(registerUser)
-
-      let payload = {subject: registerUser._id}
+      let payload = {userId: registerUser._id}
       let token = jwt.sign(payload, 'thisIsASecretKey')
       res.status(200).send({token})
     }
@@ -218,48 +228,47 @@ router.post('/register', (req, res) => {
 
 //API FOR LOGIN
 router.post('/login', (req, res) => {
-    let userData = req.body//extract the user data when submitted
+  let userData = req.body//extract the user data when submitted
 
-    User.findOne({// searching in the database for a user
-        email: userData.email
-    }, (error, user) => {
-        if (error) {
-            console.log(error)
-        } else {
-            if (!user) {//check if the user exists
-                res.status(401).send('Invalid email')
-            } else {
-                console.log(userData)
-                ///////MODIF WITH Hash
-                // User.comparePassword(userData.password, function(err, isMatch){
-                //   if(isMatch && isMatch == true){
-                //     let payload = {subject: user._id}
-                //     let token = jwt.sign(payload, 'thisIsASecretKey')
-                //     res.status(200).send({token})
-                //   }else{
-                //     res.status(401).send('Invalid password')
-                //   }
-                // })
-                let payload = {subject: user._id}
-                let token = jwt.sign(payload, 'thisIsASecretKey')
-                res.status(200).send({token})
+  User.findOne({// searching in the database for a user
+    email: userData.email
+  }, (error, user) => {
+    if (error) {
+      console.log(error)
+    } else {
+      if (!user) {//check if the user exists
+        res.status(401).send('Invalid email')
+      } else {
+        console.log(userData)
+        ///////MODIF WITH Hash
+        // User.comparePassword(userData.password, function(err, isMatch){
+        //   if(isMatch && isMatch == true){
+        //     let payload = {userId: user._id}
+        //     let token = jwt.sign(payload, 'thisIsASecretKey')
+        //     res.status(200).send({token})
+        //   }else{
+        //     res.status(401).send('Invalid password')
+        //   }
+        // })
+        let payload = {
+          userId: user._id
+        }
+        let token = jwt.sign(payload, 'thisIsASecretKey')
+        res.status(200).send({token})
 
-                ///////
-                /*
-                  if (user.password !== userData.password) {//verify the password and email are matching one user
-                      res.status(401).send('Invalid password')
-                  } else {
-                      let payload = {subject: user._id}
-                      let token = jwt.sign(payload, 'thisIsASecretKey')
-                      res.status(200).send({token})
-                  }*/
-            }//fin else
-        }//fin else
-    })//fin findOne user
+        ///////
+        /*
+          if (user.password !== userData.password) {//verify the password and email are matching one user
+              res.status(401).send('Invalid password')
+          } else {
+              let payload = {userId: user._id}
+              let token = jwt.sign(payload, 'thisIsASecretKey')
+              res.status(200).send({token})
+          }*/
+      }//fin else
+    }//fin else
+  })//fin findOne user
 })//fin login
-
-
-
 
 
 ///
