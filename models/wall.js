@@ -11,12 +11,19 @@ const wallSchema = new Schema({
     type: Date,
     default: Date.now
   },
-  userId:  {
+  userSourceId:  {
     type: String,
-    required: true,
-    trim: true
+    trim: true,
+    default: null
   },
-  user: { type: Schema.Types.ObjectId, ref: 'user' }
+  userTargetId:  {
+    type: String,
+    trim: true,
+    default: null
+  },
+  userSource: { type: Schema.Types.ObjectId, ref: 'user', default: null },
+  userTarget: { type: Schema.Types.ObjectId, ref: 'user', default: null },
+
 
 }, { collection: 'wall' });
 

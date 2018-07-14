@@ -158,22 +158,13 @@ router.get('/messages', (req, res) => {
 })
 
 router.post('/wall', verifyToken, (req, res) => {
-  console.log('post wall ....');
   let o = req.body
-  console.log(o);
-
-  // User.findOne({email: 'ssisengrath2@hotmail.com'}).exec(function (err, oUser) {
-  //   console.log('****** User *****');
-  //   console.log(o);
-  //   console.log('===========');
-  // });
-
   let token = req.headers.authorization.split(' ')[1]
   let payload = jwt.verify(token, 'thisIsASecretKey')// return the decoded value only if it's valid
   let wallData = {
     message: o.message,
-    userId: payload.userId,
-    user: payload.userId,
+    userSourceId: payload.userId,
+    userSource: payload.userId,
   }
 
   let wall = new Wall(wallData)
@@ -184,21 +175,112 @@ router.post('/wall', verifyToken, (req, res) => {
 })
 
 router.get('/wall', verifyToken, (req, res) => {
+  getWall(res, {});
+})
 
-  // Wall.findOne({_id: '5b47de24b8d8fa169ebd2fb8'}).populate('user', 'email pseudo').exec(function (err, owall) {
-  //   console.log('***********');
-  //   console.log(owall);
-  //   console.log('===========');
-  // });
+function postWall(res, payloadWall) {
+  let wall = new Wall(payloadWall)
+  wall.save((error, wallSaved) => {
+    res.send({});
+  })
+}
 
-  Wall.find({}).populate('user', 'email pseudo').sort({created: -1}).limit(20).exec(function (err, messages) {
+router.post('/profile-wall', verifyToken, (req, res) => {
+  let o = req.body
+  let token = req.headers.authorization.split(' ')[1]
+  let payload = jwt.verify(token, 'thisIsASecretKey')// return the decoded value only if it's valid
+  let payloadWall = {}
+
+  if (o.pseudo == '') {
+    payloadWall = {
+      message: o.message,
+      userSourceId: payload.userId,
+      userSource: payload.userId,
+    };
+    postWall(res, payloadWall);
+
+  } else {
+    User.findOne({pseudo: o.pseudo}).exec(function (err, infos) {
+      payloadWall = {
+        message: o.message,
+        userSourceId: payload.userId,
+        userSource: payload.userId,
+        userTargetId: infos['_id'],
+        userTarget: infos['_id'],
+      };
+      postWall(res, payloadWall)
+    });
+
+  }
+})
+
+function getWall(res, criteria) {
+  Wall.find(criteria).populate('userSource', 'email pseudo').sort({created: -1}).limit(20).exec(function (err, messages) {
     var messageMap = {};
     messages.forEach(function (message) {
       messageMap[message._id] = message;
     });
     res.send(messageMap);
   });
+}
+
+router.get('/profile-wall', verifyToken, (req, res) => {
+  var url = require('url');
+  var url_parts = url.parse(req.url, true);
+  var query = url_parts.query;
+
+  let criteria = {};
+  if (query['pseudo'] != undefined) {
+    User.findOne({pseudo: query['pseudo']}).exec(function (err, infos) {
+      criteria = {$or: [{userSourceId: infos['_id']}, {userTargetId: infos['_id']}]};
+      getWall(res, criteria);
+    });
+  } else {
+    let token = req.headers.authorization.split(' ')[1]
+    let payload = jwt.verify(token, 'thisIsASecretKey')// return the decoded value only if it's valid
+    criteria = {$or: [{userSourceId: payload.userId}, {userTargetId: payload.userId}]};
+    getWall(res, criteria);
+  }
 })
+
+
+router.get('/profile-infos', verifyToken, (req, res) => {
+
+  let token = req.headers.authorization.split(' ')[1]
+  let payload = jwt.verify(token, 'thisIsASecretKey')// return the decoded value only if it's valid
+
+  User.findOne({_id: payload.userId}).exec(function (err, infos) {
+    let data = {
+      pseudo: infos['pseudo'],
+      email: infos['email'],
+      avatar: infos['avatar'],
+    }
+    res.send(data);
+  });
+})
+
+router.get('/members', verifyToken, (req, res) => {
+
+  let token = req.headers.authorization.split(' ')[1]
+  let payload = jwt.verify(token, 'thisIsASecretKey')// return the decoded value only if it's valid
+
+  User.find({_id: {$ne: payload.userId}}).exec(function (err, result) {
+
+    let data = [];
+    for (let i in result) {
+      let user = result[i];
+      data.push({
+        pseudo: user['pseudo'],
+        email: user['email'],
+        avatar: user['avatar'],
+      });
+
+    }
+
+    res.send(data);
+  });
+})
+
 
 //API FOR REGISTER
 router.post('/register', (req, res) => {
