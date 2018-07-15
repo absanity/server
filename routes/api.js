@@ -1,17 +1,27 @@
+///// GLOBAL PACKAGES /////
 const express = require('express');
 const router = express.Router();
-const cfg = require('../config/config');//path to the mongo connection
-const jwt = require('jsonwebtoken');//jsonwebtoken for authentication
-const bcrypt = require('bcryptjs')
-const User = require('../models/user')//call the Schema for a new user
-const mongoose = require('mongoose')
-const db = "mongodb://Cotelette:a123456@ds141870.mlab.com:41870/socialnetwork"//cfg.db//api for connecting the database with the admin users
 const app = require('express')();
 const server = require('http').Server(app); //protocole http pour démarrer avec socket io
 const socket = require('socket.io')(server);
 const mongodb = require('mongodb');//call to store messages in the database
+
+///// AUTHENTICATION / SECURITY /////
+const cfg = require('../config/config');//path to the mongo connection
+const jwt = require('jsonwebtoken');//jsonwebtoken for authentication
+const bcrypt = require('bcryptjs');
+const saltRounds = 10;
+const mongoose = require('mongoose')
+const db = "mongodb://Cotelette:a123456@ds141870.mlab.com:41870/socialnetwork"//cfg.db//api for connecting the database with the admin users
+
+///// SCHEMAS /////
+const User = require('../models/user')//call the Schema for a new user
 const conversation = require('../models/conversation')// call the Schema for the conversation
 
+///// SENDING MAIL /////
+const mailer = require('../mail/nodemailer');//generic function for sending emails
+const forgottenPassword =  require('../mail/forgottenPassword')//used for requesting a new Password
+const subscriptionSuccess = require('../mail/subscriptionSuccess')//used to notify a new user that the account have been successfully created
 
 ///VARIABLES USED FOR THE CHAT APP///
 let users;
@@ -19,7 +29,7 @@ let count;
 let chatRooms;
 let messagesArray = [];
 
-
+///// GLOBAL CONNECTION TO MONGO DB /////
 mongoose.connect(db, err => {
     if (err) {
         console.log(err)
@@ -28,6 +38,7 @@ mongoose.connect(db, err => {
     }
 })//end connection to mongo db
 
+///// FUNCTION TO VERIFY TOKEN /////
 //function to verify the token send from the browser
 function verifyToken(req, res, next) {
     if (!req.headers.authorization) {
@@ -46,11 +57,12 @@ function verifyToken(req, res, next) {
 
 }
 
+///// GET ROUTES /////
+
 //Default route
 router.get('/', (req, res) => {
     res.send('From API route')
 });
-
 
 //HomePage routes
 router.get('/home', (req, res) => {
@@ -158,6 +170,8 @@ router.get('/messages', (req, res) => {
 })
 
 
+
+///// POST ROUTES /////
 //API FOR REGISTER
 router.post('/register', (req, res) => {
     let userData = {
@@ -178,11 +192,14 @@ router.post('/register', (req, res) => {
 
             }
         } else {
-            console.log(registerUser)
+            //console.log(registerUser)
 
             let payload = {subject: registerUser._id}
             let token = jwt.sign(payload, 'thisIsASecretKey')
             res.status(200).send({token})
+            let subject = subscriptionSuccess.subject();
+            let message = subscriptionSuccess.message();
+            mailer.sendEmail(subject, message, user.email)
         }
     })//end save method for register someone
 })//end post for register method
@@ -202,6 +219,8 @@ router.post('/login', (req, res) => {
                 res.status(401).send('Invalid email')
             } else {
               console.log(user)
+              console.log(userData.password)
+              console.log(user.password)
               ///////MODIF WITH Hash
               /*
               user.comparePassword(user.password, function(err, isMatch){
@@ -218,17 +237,57 @@ router.post('/login', (req, res) => {
               bcrypt.compare(userData.password, user.password, function(err, result){
                 if(err){
                   console.log(err)
-                }else{
+                }{
+                  if(!result){
+                    res.status(401).send('invalid password');
+                  }else{
                   let payload = {subject: user._id}
                   let token = jwt.sign(payload, 'thisIsASecretKey')
                   res.status(200).send({token})
                 }
+              }
               })//end bcrypt
             }//fin else
         }//fin else
     })//fin findOne user
 })//fin login
 
+
+///// ROUTE FOR PASSWORD REQUEST /////
+router.post('/resetpassword', (req, res) => {
+  let email = req.body.email;
+
+  User.findOne({email: email}, (err, user) => {
+    if(err){
+      console.log(err)
+    }else{
+      if(!user){
+        res.status(401).send('wrong email')
+      }else{
+        let newPassword = Math.random().toString(36).slice(-8);
+        bcrypt.hash(newPassword, saltRounds, function (err, hash) {
+          if(err){
+            console.log(err)
+          }else{
+            User.findOneAndUpdate({email: email}, {password: hash}, (err, data) => {
+              if(err){
+                console.log(err)
+              }else{
+                let subject = forgottenPassword.subject();
+                let message = forgottenPassword.message(newPassword);
+                mailer.sendEmail(subject, message, email)
+                res.status(200).send('OK')
+              }
+            })
+          }
+        });//end bcrypt
+      }
+    }
+  })//end findOne
+})//end resetpassword
+router.post('/send', (req, res) => {
+  console.log(req.body)
+});//end send
 
 
 ///
