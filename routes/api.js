@@ -4,6 +4,7 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');//jsonwebtoken for authentication
 const User = require('../models/user')//call the Schema for a new user
 const Wall = require('../models/wall')//call the Schema for a new user
+const Relationship = require('../models/relationship')//call the Schema for a new user
 const mongoose = require('mongoose')
 const db = "mongodb://Cotelette:a123456@ds141870.mlab.com:41870/socialnetwork"//cfg.db//api for connecting the database with the admin users
 const app = require('express')();
@@ -243,20 +244,65 @@ router.get('/profile-wall', verifyToken, (req, res) => {
   }
 })
 
+function getInfos(res, criteriaInfos, myId) {
+  User.findOne(criteriaInfos).exec(function (err, infos) {
+    console.log('User result...');
+    let criteriaRelationship = {
+      $or: [
+        {$and: [{userSourceId: infos['_id']}, {userTargetId: myId}]},
+        {$and: [{userSourceId: myId}, {userTargetId: infos['_id']}]}
+      ]
+    };
+
+    Relationship.findOne(criteriaRelationship).exec(function (err, relationship) {
+      console.log('Relationship result...');
+      console.log(relationship);
+      let accepted = null;
+      let typeRelationship = null;
+
+      if (myId != infos['_id']) {
+        typeRelationship = 0;
+        if (relationship != null) {
+          if (relationship.userSourceId == myId) {
+            typeRelationship = 1;
+          } else {
+            typeRelationship = 2;
+          }
+          accepted = relationship.accepted;
+        }
+      }
+      let data = {
+        pseudo: infos['pseudo'],
+        email: infos['email'],
+        avatar: infos['avatar'],
+        typeRelationship: typeRelationship,
+        accepted: accepted,
+      }
+      res.send(data);
+    })
+
+
+  });
+}
 
 router.get('/profile-infos', verifyToken, (req, res) => {
+  console.log('profile-infos...');
+  var url = require('url');
+  var url_parts = url.parse(req.url, true);
+  var query = url_parts.query;
 
   let token = req.headers.authorization.split(' ')[1]
-  let payload = jwt.verify(token, 'thisIsASecretKey')// return the decoded value only if it's valid
+  let payload = jwt.verify(token, 'thisIsASecretKey')
 
-  User.findOne({_id: payload.userId}).exec(function (err, infos) {
-    let data = {
-      pseudo: infos['pseudo'],
-      email: infos['email'],
-      avatar: infos['avatar'],
-    }
-    res.send(data);
-  });
+  if (query['pseudo'] != undefined) {
+    User.findOne({pseudo: query['pseudo']}).exec(function (err, infos) {
+      getInfos(res, {_id: infos['_id']}, payload.userId);
+    });
+  } else {
+
+    getInfos(res, {_id: payload.userId}, payload.userId);
+  }
+
 })
 
 router.get('/members', verifyToken, (req, res) => {
@@ -281,6 +327,253 @@ router.get('/members', verifyToken, (req, res) => {
   });
 })
 
+
+router.post('/invite', verifyToken, (req, res) => {
+  console.log('invite...');
+  let o = req.body
+  let token = req.headers.authorization.split(' ')[1]
+  let payload = jwt.verify(token, 'thisIsASecretKey')// return the decoded value only if it's valid
+  console.log(payload);
+
+  User.findOne({pseudo: o.pseudo}).exec(function (err, infos) {
+    console.log('User.findOne res...');
+    if (payload.userId == infos['_id']) {
+      res.send({});
+    } else {
+
+      let criteriaRelationship = {
+        $or: [
+          {$and: [{userSourceId: infos['_id']}, {userTargetId: payload.userId}]},
+          {$and: [{userSourceId: payload.userId}, {userTargetId: infos['_id']}]}
+        ]
+      };
+
+      Relationship.findOne(criteriaRelationship).exec(function (err, relationship) {
+
+        if (relationship != null) {
+          res.send({});
+        } else {
+          let payloadRelationship = {
+            userSourceId: payload.userId,
+            userTargetId: infos['_id'],
+            userSource: payload.userId,
+            userTarget: infos['_id'],
+          };
+          let relationship = new Relationship(payloadRelationship)
+          relationship.save((error, data) => {
+            res.send({});
+          })
+        }
+
+      })
+
+    }
+  });
+})
+
+router.post('/cancel-invitation', verifyToken, (req, res) => {
+  let o = req.body
+  let token = req.headers.authorization.split(' ')[1]
+  let payload = jwt.verify(token, 'thisIsASecretKey')// return the decoded value only if it's valid
+
+  console.log('cancel-invitation...');
+
+  User.findOne({pseudo: o.pseudo}).exec(function (err, infos) {
+    console.log('User.findOne res...');
+    if (payload.userId == infos['_id']) {
+      console.log('test 1');
+      res.send({});
+    } else {
+      console.log('test 2');
+
+      let criteriaRelationship = {
+        $or: [
+          {$and: [{userSourceId: infos['_id']}, {userTargetId: payload.userId}]},
+          {$and: [{userSourceId: payload.userId}, {userTargetId: infos['_id']}]}
+        ]
+      };
+
+      Relationship.findOne(criteriaRelationship).exec(function (err, relationship) {
+        console.log('test 3');
+
+        if (relationship == null) {
+          console.log('test 4');
+          res.send({});
+        } else {
+          console.log('test 5');
+          Relationship.remove({_id: relationship._id}, function (err) {
+            console.log('test 6');
+            res.send({});
+
+          });
+        }
+
+      })
+
+    }
+  });
+
+})
+
+
+router.post('/accept-invitation', verifyToken, (req, res) => {
+  let o = req.body
+  let token = req.headers.authorization.split(' ')[1]
+  let payload = jwt.verify(token, 'thisIsASecretKey')// return the decoded value only if it's valid
+
+  console.log('accept-invitation...');
+
+  User.findOne({pseudo: o.pseudo}).exec(function (err, infos) {
+    console.log('User.findOne res...');
+    if (payload.userId == infos['_id']) {
+      console.log('test 1');
+      res.send({});
+    } else {
+      console.log('test 2');
+
+      let criteriaRelationship = {
+        $or: [
+          {$and: [{userSourceId: infos['_id']}, {userTargetId: payload.userId}]},
+          {$and: [{userSourceId: payload.userId}, {userTargetId: infos['_id']}]}
+        ]
+      };
+
+      Relationship.findOne(criteriaRelationship).exec(function (err, relationship) {
+        console.log('test 3');
+
+        if (relationship == null) {
+          console.log('test 4');
+          res.send({});
+        } else {
+          console.log('test 5');
+          Relationship.update({_id: relationship._id}, {$set: {accepted: true}}, function (err) {
+            console.log('test 6');
+            res.send({});
+
+          });
+
+        }
+
+      })
+
+    }
+  });
+
+})
+
+router.post('/delete-relationship', verifyToken, (req, res) => {
+  let o = req.body
+  let token = req.headers.authorization.split(' ')[1]
+  let payload = jwt.verify(token, 'thisIsASecretKey')// return the decoded value only if it's valid
+
+  console.log('delete-relationship...');
+
+  User.findOne({pseudo: o.pseudo}).exec(function (err, infos) {
+    console.log('User.findOne res...');
+    if (payload.userId == infos['_id']) {
+      console.log('test 1');
+      res.send({});
+    } else {
+      console.log('test 2');
+
+      let criteriaRelationship = {
+        $or: [
+          {$and: [{userSourceId: infos['_id']}, {userTargetId: payload.userId}]},
+          {$and: [{userSourceId: payload.userId}, {userTargetId: infos['_id']}]}
+        ]
+      };
+
+      Relationship.findOne(criteriaRelationship).exec(function (err, relationship) {
+        console.log('test 3');
+
+        if (relationship == null) {
+          console.log('test 4');
+          res.send({});
+        } else {
+          console.log('test 5');
+          Relationship.remove({_id: relationship._id}, function (err) {
+            console.log('test 6');
+            res.send({});
+
+          });
+
+        }
+
+      })
+
+    }
+  });
+
+})
+
+function getFriends(res, criteria) {
+  console.log('getFriends...');
+  console.log(criteria);
+
+  Relationship.find(criteria).populate('userSource', 'email pseudo').populate('userTarget', 'email pseudo').exec(function (err, data) {
+    console.log('getFriends res...');
+    console.log(data);
+    res.send(data);
+  })
+}
+
+router.get('/friends', verifyToken, (req, res) => {
+  console.log('friends...');
+  var url = require('url');
+  var url_parts = url.parse(req.url, true);
+  var query = url_parts.query;
+
+  let token = req.headers.authorization.split(' ')[1]
+  let payload = jwt.verify(token, 'thisIsASecretKey')// return the decoded value only if it's valid
+
+  let criteria = {};
+  if (query['pseudo'] != undefined) {
+    console.log('friends... 1');
+    User.findOne({pseudo: query['pseudo']}).exec(function (err, infos) {
+      console.log('friends... 2');
+      // criteria = {$or: [{userSourceId: infos['_id']}, {userTargetId: infos['_id']}]};
+      criteria = {
+        $and: [
+          {accepted: true},
+          {$or: [{userSourceId: infos['_id']}, {userTargetId: infos['_id']}]}
+        ]
+      }
+      getFriends(res, criteria);
+    });
+  } else {
+    console.log('friends... 3');
+    // criteria = {$or: [{userSourceId: payload.userId}, {userTargetId: payload.userId}]};
+    criteria = {
+      $and: [
+        {accepted: true},
+        {$or: [{userSourceId: payload.userId}, {userTargetId: payload.userId}]}
+      ]
+    }
+    getFriends(res, criteria);
+  }
+})
+
+
+router.get('/invitations', verifyToken, (req, res) => {
+  console.log('friends...');
+
+
+  let token = req.headers.authorization.split(' ')[1]
+  let payload = jwt.verify(token, 'thisIsASecretKey')// return the decoded value only if it's valid
+
+  let criteria =
+  {
+    $or: [{userSourceId: payload.userId}, {userTargetId: payload.userId}]
+  }
+
+  Relationship.find(criteria).populate('userSource', 'email pseudo').populate('userTarget', 'email pseudo').exec(function (err, data) {
+    console.log('invitations res...');
+    console.log(data);
+    res.send(data);
+  })
+
+
+})
 
 //API FOR REGISTER
 router.post('/register', (req, res) => {
