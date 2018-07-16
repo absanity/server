@@ -23,7 +23,7 @@ const conversation = require('../models/conversation')// call the Schema for the
 
 ///// SENDING MAIL /////
 const mailer = require('../mail/nodemailer');//generic function for sending emails
-const forgottenPassword =  require('../mail/forgottenPassword')//used for requesting a new Password
+const forgottenPassword = require('../mail/forgottenPassword')//used for requesting a new Password
 const subscriptionSuccess = require('../mail/subscriptionSuccess')//used to notify a new user that the account have been successfully created
 
 ///VARIABLES USED FOR THE CHAT APP///
@@ -168,6 +168,28 @@ router.get('/messages', (req, res) => {
 
 
   });//end connection socket io
+})
+
+router.post('/wall', verifyToken, (req, res) => {
+
+  console.log('wall....');
+
+  let o = req.body
+  let token = req.headers.authorization.split(' ')[1]
+  let payload = jwt.verify(token, 'thisIsASecretKey')// return the decoded value only if it's valid
+  let wallData = {
+    message: o.message,
+    userSourceId: payload.userId,
+    userSource: payload.userId,
+  }
+
+  console.log(wallData);
+
+  let wall = new Wall(wallData)
+  wall.save((error, wallSaved) => {
+    res.send({});
+  })
+
 })
 
 router.post('/wall', verifyToken, (req, res) => {
@@ -572,15 +594,45 @@ router.get('/invitations', verifyToken, (req, res) => {
 
   let token = req.headers.authorization.split(' ')[1]
   let payload = jwt.verify(token, 'thisIsASecretKey')// return the decoded value only if it's valid
+  let myId = payload.userId;
 
   let criteria =
-  {
-    $or: [{userSourceId: payload.userId}, {userTargetId: payload.userId}]
-  }
+    {
+      $or: [{userSourceId: myId}, {userTargetId: myId}]
+    }
 
-  Relationship.find(criteria).populate('userSource', 'email pseudo').populate('userTarget', 'email pseudo').exec(function (err, data) {
+  Relationship.find(criteria).populate('userSource', 'email pseudo').populate('userTarget', 'email pseudo').exec(function (err, result) {
     console.log('invitations res...');
+    console.log(result);
+
+    let data = [];
+    for (let i in result) {
+      let relationship = result[i];
+
+      let accepted = relationship.accepted;
+
+      if (relationship.userSourceId == myId) {
+        data.push({
+          pseudo: relationship.userTarget['pseudo'],
+          email: relationship.userTarget['email'],
+          typeRelationship: 1,
+          accepted: accepted
+        });
+
+      } else {
+        data.push({
+          pseudo: relationship.userSource['pseudo'],
+          email: relationship.userSource['email'],
+          typeRelationship: 2,
+          accepted: accepted
+        });
+
+      }
+
+    }
+    console.log('----');
     console.log(data);
+
     res.send(data);
   })
 
@@ -627,35 +679,32 @@ router.post('/login', (req, res) => {
       if (!user) {//check if the user exists
         res.status(401).send('Invalid email')
       } else {
-        console.log(user)
-        console.log(userData.password)
-        console.log(user.password)
+        console.log(userData)
         ///////MODIF WITH Hash
+        // User.comparePassword(userData.password, function(err, isMatch){
+        //   if(isMatch && isMatch == true){
+        //     let payload = {userId: user._id}
+        //     let token = jwt.sign(payload, 'thisIsASecretKey')
+        //     res.status(200).send({token})
+        //   }else{
+        //     res.status(401).send('Invalid password')
+        //   }
+        // })
+        let payload = {
+          userId: user._id
+        }
+        let token = jwt.sign(payload, 'thisIsASecretKey')
+        res.status(200).send({token})
+
+        ///////
         /*
-        user.comparePassword(user.password, function(err, isMatch){
-          if(isMatch && isMatch == true){
-            console.log('comparison')
-            let payload = {subject: user._id}
-            let token = jwt.sign(payload, 'thisIsASecretKey')
-            res.status(200).send({token})
-          }else{
-            res.status(401).send('Invalid password')
-          }
-        })//end comparePassword
-        */
-        bcrypt.compare(userData.password, user.password, function(err, result){
-          if(err){
-            console.log(err)
-          }{
-            if(!result){
-              res.status(401).send('invalid password');
-            }else{
-              let payload = {subject: user._id}
+          if (user.password !== userData.password) {//verify the password and email are matching one user
+              res.status(401).send('Invalid password')
+          } else {
+              let payload = {userId: user._id}
               let token = jwt.sign(payload, 'thisIsASecretKey')
               res.status(200).send({token})
-            }
-          }
-        })//end bcrypt
+          }*/
       }//fin else
     }//fin else
   })//fin findOne user
@@ -667,21 +716,21 @@ router.post('/resetpassword', (req, res) => {
   let email = req.body.email;
 
   User.findOne({email: email}, (err, user) => {
-    if(err){
+    if (err) {
       console.log(err)
-    }else{
-      if(!user){
+    } else {
+      if (!user) {
         res.status(401).send('wrong email')
-      }else{
+      } else {
         let newPassword = Math.random().toString(36).slice(-8);
         bcrypt.hash(newPassword, saltRounds, function (err, hash) {
-          if(err){
+          if (err) {
             console.log(err)
-          }else{
+          } else {
             User.findOneAndUpdate({email: email}, {password: hash}, (err, data) => {
-              if(err){
+              if (err) {
                 console.log(err)
-              }else{
+              } else {
                 let subject = forgottenPassword.subject();
                 let message = forgottenPassword.message(newPassword);
                 mailer.sendEmail(subject, message, email)
