@@ -1,18 +1,30 @@
+///// GLOBAL PACKAGES /////
 const express = require('express');
 const router = express.Router();
-// const cfg = require('../config/config');//path to the mongo connection
-const jwt = require('jsonwebtoken');//jsonwebtoken for authentication
-const User = require('../models/user')//call the Schema for a new user
-const Wall = require('../models/wall')//call the Schema for a new user
-const Relationship = require('../models/relationship')//call the Schema for a new user
-const mongoose = require('mongoose')
-const db = "mongodb://Cotelette:a123456@ds141870.mlab.com:41870/socialnetwork"//cfg.db//api for connecting the database with the admin users
 const app = require('express')();
 const server = require('http').Server(app); //protocole http pour démarrer avec socket io
 const socket = require('socket.io')(server);
 const mongodb = require('mongodb');//call to store messages in the database
+
+///// AUTHENTICATION / SECURITY /////
+// const cfg = require('../config/config');//path to the mongo connection
+const jwt = require('jsonwebtoken');//jsonwebtoken for authentication
+const bcrypt = require('bcryptjs');
+
+const saltRounds = 10;
+const mongoose = require('mongoose')
+const db = "mongodb://Cotelette:a123456@ds141870.mlab.com:41870/socialnetwork"//cfg.db//api for connecting the database with the admin users
+
+///// SCHEMAS /////
+const User = require('../models/user')//call the Schema for a new user
+const Wall = require('../models/wall')//call the Schema for a new user
+const Relationship = require('../models/relationship')//call the Schema for a new user
 const conversation = require('../models/conversation')// call the Schema for the conversation
 
+///// SENDING MAIL /////
+const mailer = require('../mail/nodemailer');//generic function for sending emails
+const forgottenPassword =  require('../mail/forgottenPassword')//used for requesting a new Password
+const subscriptionSuccess = require('../mail/subscriptionSuccess')//used to notify a new user that the account have been successfully created
 
 ///VARIABLES USED FOR THE CHAT APP///
 let users;
