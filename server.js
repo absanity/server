@@ -10,12 +10,10 @@ const server = require('http').Server(app); //protocole http pour démarrer avec
 const io = require('socket.io')(server);
 const mongodb = require('mongodb');//call to store messages in the database
 const cookieParser = require('cookie-parser');
-const nodemailer = require('nodemailer'); //used to send emails to user
 
 //const app = express();
 app.use(cors());
 app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({extended: false}));
 app.use(cookieParser())
 app.use('/api', api)
 app.get('/', function (req, res) {
