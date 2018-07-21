@@ -13,7 +13,7 @@ const cookieParser = require('cookie-parser');
 const nodemailer = require('nodemailer'); //used to send emails to user
 
 //const app = express();
-app.use(cors());
+//app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: false}));
 app.use(cookieParser())
@@ -35,12 +35,33 @@ app.use((req, res, next) => {
 
 ///CONFIGURATION TO UPLOAD FILES
 var corsOptions = {
-    origin: '*',
-    optionsSuccessStatus: 200
+    origin: 'http://localhost:4200',
+    optionsSuccessStatus: 200,
+    credentials: true
 };
 app.use(cors(corsOptions));
-app.post('/upload', upload);
+//app.post('/upload', upload);
 
+app.get('/uploads/:name', function(req, res, next) {
+  var options = {
+    root: __dirname + '/uploads/',
+    dotfiles: 'deny',
+    headers: {
+      'x-timestamp': Date.now(),
+      'x-sent': true
+    }
+  }
+})//end app get
+/*
+var fileName = req.params.name;
+res.sendFile(fileName, options, function(err){
+  if(err){
+    console.log(err)
+  }else{
+
+  }
+})
+*/
 app.listen(port, function () {
     console.log('listening on port ' + port)
 });

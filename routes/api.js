@@ -26,6 +26,9 @@ const mailer = require('../mail/nodemailer');//generic function for sending emai
 const forgottenPassword = require('../mail/forgottenPassword')//used for requesting a new Password
 const subscriptionSuccess = require('../mail/subscriptionSuccess')//used to notify a new user that the account have been successfully created
 
+///// UPLOAD FILES /////
+const multer = require('multer');
+
 ///VARIABLES USED FOR THE CHAT APP///
 let users;
 let count;
@@ -639,12 +642,48 @@ router.get('/invitations', verifyToken, (req, res) => {
 
 })
 
+////// UPLOAD /////
+var storage = multer.diskStorage({
+  destination: function(req, file, cb){
+    cb(null, './uploads')
+  },
+  filename: function(req, file, cb){
+    cb(null, file.originalname)
+  }
+})//end diskstorage
+
+var upload = multer({ storage: storage })
+
+router.post('/upload', verifyToken, upload.single('image'), function(req, res, next) {
+  User.findOneAndUpdate({_id: req.userId}, {
+    avatar: {
+      path: req.file.path
+    }
+  }, (err, data) => {
+    if(err){
+      console.log(err)
+    }else{
+      let theServerSaid = {
+        message: req.file.path
+      };
+      res.status(200).send({theServerSaid})
+    }
+  })//end findOneAndUpdate
+})//end router upload
+
 //API FOR REGISTER
 router.post('/register', (req, res) => {
   let userData = {
     email: req.body.email,
     password: req.body.password,
     pseudo: req.body.pseudo,
+    name: req.body.name,
+    surname: req.body.surname,
+    age: req.body.age,
+    city: req.body.city,
+    gender: req.body.gender,
+    preferences: req.body.preferences,
+    summary: req.body.summary,
     role: 1,
     avatar: "https://api.adorable.io/avatars/80/" + req.body.pseudo,
     _id: new mongoose.Types.ObjectId(),
