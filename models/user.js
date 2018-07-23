@@ -2,6 +2,12 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs'); //call to hash password and not store it directly in the database
 const SALT_WORK_FACTOR = 10; // used for hashing the password
 const Schema = mongoose.Schema
+
+const userAvatar  = new Schema({
+    _id : false,
+    path: String,
+})
+
 const userSchema = new Schema({
   email: {
     type: String,
@@ -36,7 +42,7 @@ const userSchema = new Schema({
     required: true
   },
   gender: {
-    type: Number,
+    type: String,
     required: true
   },
   preferences: {
@@ -50,7 +56,7 @@ const userSchema = new Schema({
     type: Number,
     default: 1
   },
-  avatar: String
+  avatar: userAvatar
 });
 /// METHODS FOR THE HASHED PASSWORD ///
 //execute this method just before saving the user in the database

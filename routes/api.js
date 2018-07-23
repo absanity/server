@@ -655,6 +655,8 @@ var storage = multer.diskStorage({
 var upload = multer({ storage: storage })
 
 router.post('/upload', verifyToken, upload.single('image'), function(req, res, next) {
+  console.log(req.userId)
+  console.log(req.file.path)
   User.findOneAndUpdate({_id: req.userId}, {
     avatar: {
       path: req.file.path
@@ -673,19 +675,20 @@ router.post('/upload', verifyToken, upload.single('image'), function(req, res, n
 
 //API FOR REGISTER
 router.post('/register', (req, res) => {
+  console.log(req.body)
   let userData = {
     email: req.body.email,
     password: req.body.password,
     pseudo: req.body.pseudo,
     name: req.body.name,
     surname: req.body.surname,
-    age: req.body.age,
+    age: parseInt(req.body.age),
     city: req.body.city,
     gender: req.body.gender,
     preferences: req.body.preferences,
     summary: req.body.summary,
     role: 1,
-    avatar: "https://api.adorable.io/avatars/80/" + req.body.pseudo,
+    avatar: {path: "https://api.adorable.io/avatars/80/" + req.body.pseudo},
     _id: new mongoose.Types.ObjectId(),
   }//extract the user data from the object front
   let user = new User(userData)//convert the userData into the model we specified in mongoose
@@ -707,6 +710,7 @@ router.post('/register', (req, res) => {
 
 //API FOR LOGIN
 router.post('/login', (req, res) => {
+  //console.log('pas cassé')
   let userData = req.body//extract the user data when submitted
 
   User.findOne({// searching in the database for a user
