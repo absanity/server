@@ -71,9 +71,12 @@ router.get('/', (req, res) => {
 //HomePage routes
 
 router.get('/home',  (req, res) => {
-  User.find({}).count().exec(function (err, result) {
+
+  User.find({}).countDocuments().exec(function (err, result) {
     console.log(result)
+    res.send(JSON.stringify({ result: result }))
   });
+
 })
 
 
