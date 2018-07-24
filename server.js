@@ -44,8 +44,9 @@ app.use(cors(corsOptions));
 //app.post('/upload', upload);
 
 app.get('/uploads/:name', function(req, res, next) {
+
   var options = {
-    root: __dirname + '/uploads/',
+    root:  '/Users/admin/Documents/rsocial/socialNetwork/1_socialNetwork/src/assets/uploads/',
     dotfiles: 'deny',
     headers: {
       'x-timestamp': Date.now(),

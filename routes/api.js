@@ -69,9 +69,13 @@ router.get('/', (req, res) => {
 
 
 //HomePage routes
-router.get('/home', (req, res) => {
-  res.send('Hi')
+
+router.get('/home',  (req, res) => {
+  User.find({}).count().exec(function (err, result) {
+    console.log(result)
+  });
 })
+
 
 //Profil Route
 router.get('/profil', verifyToken, (req, res) => {
@@ -645,7 +649,7 @@ router.get('/invitations', verifyToken, (req, res) => {
 ////// UPLOAD /////
 var storage = multer.diskStorage({
   destination: function(req, file, cb){
-    cb(null, './uploads')
+    cb(null, '/Users/admin/Documents/rsocial/socialNetwork/1_socialNetwork/src/assets/uploads')
   },
   filename: function(req, file, cb){
     cb(null, file.originalname)
@@ -659,7 +663,7 @@ router.post('/upload', verifyToken, upload.single('image'), function(req, res, n
   console.log(req.file.path)
   User.findOneAndUpdate({_id: req.userId}, {
     avatar: {
-      path: req.file.path
+      path: req.file.originalname
     }
   }, (err, data) => {
     if(err){
