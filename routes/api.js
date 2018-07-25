@@ -72,12 +72,19 @@ router.get('/', (req, res) => {
 
 router.get('/home',  (req, res) => {
 
-  User.find({}).countDocuments().exec(function (err, result) {
-    console.log(result)
-    res.send(JSON.stringify({ result: result }))
+  User.find({}).count().exec(function (err, result) {
+    var nbUsers = result
+    console.log(nbUsers)
+    Wall.find({}).count().exec(function (err, result) {
+      var nbMsg = result
+      console.log(nbMsg)
+      var stats = {nbUsers: nbUsers, nbMsg: nbMsg}
+      res.send(JSON.stringify(stats))
+    })
+    //console.log(result)
+    //res.send(JSON.stringify({ result: result }))
   });
-
-})
+});
 
 
 //Profil Route
@@ -349,13 +356,14 @@ router.get('/profile-infos', verifyToken, (req, res) => {
 
 })
 
+
+//////// ROUTE FOR SEEING ALL THE MEMBERS ///////
 router.get('/members', verifyToken, (req, res) => {
 
   let token = req.headers.authorization.split(' ')[1]
   let payload = jwt.verify(token, 'thisIsASecretKey')// return the decoded value only if it's valid
 
   User.find({_id: {$ne: payload.userId}}).exec(function (err, result) {
-
     let data = [];
     for (let i in result) {
       let user = result[i];
@@ -364,12 +372,25 @@ router.get('/members', verifyToken, (req, res) => {
         email: user['email'],
         avatar: user['avatar'],
       });
-
     }
-
     res.send(data);
   });
-})
+});
+/*SEARCH MEMBERS */
+router.post('/members', verifyToken, (req, res) => {
+  let userToFind = req.body;
+  User.find({pseudo: userToFind}).exec(function (err, member){
+    if(err){
+      console.log(err)
+    }else{
+      if(!member){
+        res.status(401).send('No user found with this pseudo')
+      }else{
+        console.log(member)
+      }
+    }
+  })
+}); //end post members
 
 
 router.post('/invite', verifyToken, (req, res) => {
