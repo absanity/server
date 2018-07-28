@@ -13,6 +13,7 @@ console.log('test1');
 
 io.sockets.on('connection', function (socket, pseudo) {
   console.log('connected : ');
+  console.log(pseudo);
 
   // Dès qu'on nous donne un pseudo, on le stocke en variable de session et on informe les autres personnes
   socket.on('nouveau_client', function(pseudo) {

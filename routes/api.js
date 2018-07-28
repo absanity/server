@@ -19,7 +19,7 @@ const db = "mongodb://Cotelette:a123456@ds141870.mlab.com:41870/socialnetwork"//
 const User = require('../models/user')//call the Schema for a new user
 const Wall = require('../models/wall')//call the Schema for a new user
 const Relationship = require('../models/relationship')//call the Schema for a new user
-const conversation = require('../models/conversation')// call the Schema for the conversation
+const Conversation = require('../models/conversation')// call the Schema for the conversation
 
 ///// SENDING MAIL /////
 const mailer = require('../mail/nodemailer');//generic function for sending emails
@@ -733,7 +733,9 @@ router.post('/login', (req, res) => {
         ///////MODIF WITH Hash
          user.comparePassword(userData.password, function(err, isMatch){
            if(isMatch && isMatch == true){
-             let payload = {userId: user._id}
+             let payload = {userId: user._id, pseudo: user.pseudo}
+             console.log('login success');
+             console.log(payload);
              let token = jwt.sign(payload, 'thisIsASecretKey')
              res.status(200).send({token})
            }else{
