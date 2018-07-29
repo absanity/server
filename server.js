@@ -80,16 +80,23 @@ server.listen(port, function () {
 });
 
 
-let socketTokens = {};
+var cloneSocket;
+var socketIds = [];
 
 io.sockets.on('connection', function (socket) {
-  console.log('connected ++++++++++++++++ ');
-  console.log(socket.id);
-  // console.log(socket);
+  console.log('>>> [connection] >>>>');
+
+  cloneSocket = socket;
+
+  socket.on('forceDisconnect', function(){
+    console.log('>>> [forceDisconnect] >>>>');
+
+    socket.disconnect();
+  });
 
   // Dès qu'on nous donne un pseudo, on le stocke en variable de session et on informe les autres personnes
   socket.on('nouveau_client', function(pseudo) {
-    console.log('on nouveau_client ...');
+    console.log('>>> [nouveau_client] >>>>');
 
     // pseudo = ent.encode(pseudo);
     socket.pseudo = pseudo;
@@ -98,24 +105,158 @@ io.sockets.on('connection', function (socket) {
 
   // Dès qu'on reçoit un message, on récupère le pseudo de son auteur et on le transmet aux autres personnes
   socket.on('message', function (message) {
-    console.log('on message ...');
-    console.log(message);
+    console.log('>>> [message] >>>>');
     // message = ent.encode(message);
     socket.broadcast.emit('message', {pseudo: socket.pseudo, message: message});
   });
 
   socket.on('send_token', function(token) {
-    console.log('on send_token....');
-    // console.log(token);
-    // socket.token = token;
+    console.log('>>> [send_token] >>>>');
+    if(token != null) {
+      // socket.token = token;
+      let payload = jwt.verify(token, 'thisIsASecretKey')// return the decoded value only if it's valid
+      console.log(payload);
+      socketIds[payload.pseudo] = socket.id;
+      console.log('************** socketIds *********************');
+      console.log(socketIds);
 
-    let payload = jwt.verify(token, 'thisIsASecretKey')// return the decoded value only if it's valid
+      // console.log('**************************** socket *************************');
+      // console.log(socket);
+      // console.log('**************************************************************');
 
-    console.log(payload);
+      socket.emit('token_check', "ok");
 
-    socketTokens[payload.pseudo] = socket;
-    // console.log(socketTokens);
+      let connectedUsers = [];
+      for(let pseudo in socketIds) {
+        connectedUsers.push({
+          pseudo: pseudo
+        });
+      }
+      console.log('************** connectedUsers *********************');
+      console.log(connectedUsers);
+      socket.emit('connected_users', connectedUsers);
+
+
+    } else {
+      socket.emit('token_check', "nok");
+
+    }
   });
 
 
 });
+
+
+
+
+app.post('/api/chat-message', verifyToken, (req, res) => {
+  console.log('### [/api/chat-message] >>');
+
+  let o = req.body
+  let token = req.headers.authorization.split(' ')[1]
+  let payload = jwt.verify(token, 'thisIsASecretKey')
+  // console.log(payload);
+
+
+  let placeType = o.placeType;
+  let placeName = o.placeName;
+
+  console.log('placeType: ' + placeType);
+  console.log('placeName: ' + placeName);
+
+  let returnPayload = {
+    placeType: placeType,
+    placeName: placeName,
+    message: o.message,
+    senderPseudo: payload.pseudo
+  };
+
+  if(placeType == 'room' && placeName== 'default') {
+
+    console.log('*** send room');
+
+    // sending to all clients, include sender
+    io.emit('message', returnPayload);
+
+    res.status(200).send({});
+
+  } else {
+
+    console.log('*** send private : ' + payload.pseudo + ' to ' + placeName);
+
+    let idSource = socketIds[payload.pseudo];
+    let idTarget = socketIds[placeName];
+
+    // sending to sender-client only
+    console.log('idSource : ' + idSource);
+    // cloneSocket.emit('message-private-to-source', returnPayload);
+    // cloneSocket.broadcast.to(idSource).emit('message-private-to-source', returnPayload);
+    io.to(idSource).emit('message-private-to-source', returnPayload);
+
+
+    // sending to individual socketid
+    console.log('idTarget : ' + idTarget);
+    // cloneSocket.broadcast.to(idTarget).emit('message-private-to-target', returnPayload);
+    io.to(idTarget).emit('message-private-to-target', returnPayload);
+
+    res.status(200).send({});
+
+  }
+
+
+});
+
+
+function verifyToken(req, res, next) {
+  if (!req.headers.authorization) {
+    return res.status(401).send('Ooops, unauthorized request')
+  }
+  let token = req.headers.authorization.split(' ')[1]
+  if (token === 'null') {
+    return res.status(401).send('Ooops, unauthorized request')
+  }
+  let payload = jwt.verify(token, 'thisIsASecretKey')// return the decoded value only if it's valid
+  if (!payload) {
+    return res.status(401).send('Ooops, unauthorized request')
+  }// the variable payload is only valid if a value is set
+  req.userId = payload.userId
+  next()
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// // sending to sender-client only
+// socket.emit('message', "this is a test");
+//
+// // sending to all clients, include sender
+// io.emit('message', "this is a test");
+//
+// // sending to all clients except sender
+// socket.broadcast.emit('message', "this is a test");
+//
+// // sending to all clients in 'game' room(channel) except sender
+// socket.broadcast.to('game').emit('message', 'nice game');
+//
+// // sending to all clients in 'game' room(channel), include sender
+// io.in('game').emit('message', 'cool game');
+//
+// // sending to sender client, only if they are in 'game' room(channel)
+// socket.to('game').emit('message', 'enjoy the game');
+//
+// // sending to all clients in namespace 'myNamespace', include sender
+// io.of('myNamespace').emit('message', 'gg');
+//
+// // sending to individual socketid
+// socket.broadcast.to(socketid).emit('message', 'for your eyes only');
