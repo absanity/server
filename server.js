@@ -266,3 +266,4 @@ function verifyToken(req, res, next) {
 //
 // // sending to individual socketid
 // socket.broadcast.to(socketid).emit('message', 'for your eyes only');
+
