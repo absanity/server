@@ -88,6 +88,19 @@ io.sockets.on('connection', function (socket) {
 
   cloneSocket = socket;
 
+  socket.on('disconnect', function(){
+    console.log('>>> [disconnect] >>>>');
+
+    for(var pseudo in socketIds) {
+      if(socketIds[pseudo] == socket.id) {
+        delete socketIds[pseudo];
+      }
+    }
+    let connectedUsers = getConnectedUsers();
+    console.log(connectedUsers);
+    io.emit('disconnect', { connectedUsers: connectedUsers });
+  });
+
   socket.on('forceDisconnect', function(){
     console.log('>>> [forceDisconnect] >>>>');
 
@@ -117,25 +130,10 @@ io.sockets.on('connection', function (socket) {
       let payload = jwt.verify(token, 'thisIsASecretKey')// return the decoded value only if it's valid
       console.log(payload);
       socketIds[payload.pseudo] = socket.id;
-      console.log('************** socketIds *********************');
-      console.log(socketIds);
-
-      // console.log('**************************** socket *************************');
-      // console.log(socket);
-      // console.log('**************************************************************');
 
       socket.emit('token_check', "ok");
 
-      let connectedUsers = [];
-      for(let pseudo in socketIds) {
-        connectedUsers.push({
-          pseudo: pseudo
-        });
-      }
-      console.log('************** connectedUsers *********************');
-      console.log(connectedUsers);
-      socket.emit('connected_users', connectedUsers);
-
+      io.emit('connected_users', getConnectedUsers());
 
     } else {
       socket.emit('token_check', "nok");
@@ -146,7 +144,15 @@ io.sockets.on('connection', function (socket) {
 
 });
 
-
+function getConnectedUsers() {
+  let connectedUsers = [];
+  for(let pseudo in socketIds) {
+    connectedUsers.push({
+      pseudo: pseudo
+    });
+  }
+  return connectedUsers;
+}
 
 
 app.post('/api/chat-message', verifyToken, (req, res) => {

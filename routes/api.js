@@ -557,7 +557,7 @@ router.post('/register', (req, res) => {
     } else {
       let payload = {userId: registerUser._id, pseudo: req.body.pseudo}
       let token = jwt.sign(payload, 'thisIsASecretKey')
-      res.status(200).send({token})
+      res.status(200).send({ token: token, pseudo: req.body.pseudo })
     }
   })//end save method for register someone
 })//end post for register method
@@ -585,7 +585,7 @@ router.post('/login', (req, res) => {
            if(isMatch && isMatch == true){
              let payload = {userId: user._id, pseudo: user.pseudo}
              let token = jwt.sign(payload, 'thisIsASecretKey')
-             res.status(200).send({token})
+             res.status(200).send({ token: token, pseudo: user.pseudo })
            }else{
              res.status(401).send('Invalid password')
            }
