@@ -719,6 +719,9 @@ router.post('/upload', verifyToken, upload.single('image'), function(req, res, n
   })//end findOneAndUpdate
 })//end router upload
 
+
+
+
 //API FOR REGISTER
 router.post('/register', (req, res) => {
   console.log(req.body)

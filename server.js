@@ -43,8 +43,8 @@ var corsOptions = {
 app.use(cors(corsOptions));
 //app.post('/upload', upload);
 
-app.get('/uploads/:name', function(req, res, next) {
-
+app.get('/assets/uploads/:name', function(req, res, next) {
+console.log('upload du server')
   var options = {
     root:  '/Users/admin/Documents/rsocial/socialNetwork/1_socialNetwork/src/assets/uploads/',
     dotfiles: 'deny',
