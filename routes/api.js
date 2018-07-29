@@ -267,7 +267,7 @@ router.post('/profile-wall', verifyToken, (req, res) => {
 })
 
 function getWall(res, criteria) {
-  Wall.find(criteria).populate('userSource', 'email pseudo').sort({created: -1}).limit(20).exec(function (err, messages) {
+  Wall.find(criteria).populate('userSource', 'email pseudo avatar').sort({created: -1}).limit(20).exec(function (err, messages) {
     var messageMap = {};
     messages.forEach(function (message) {
       messageMap[message._id] = message;
@@ -328,7 +328,11 @@ function getInfos(res, criteriaInfos, myId) {
         avatar: infos['avatar'],
         typeRelationship: typeRelationship,
         accepted: accepted,
+        city: infos['city'],
+        preferences: infos['preferences']
       }
+
+      console.log(data)
       res.send(data);
     })
 
@@ -377,17 +381,28 @@ router.get('/members', verifyToken, (req, res) => {
   });
 });
 /*SEARCH MEMBERS */
-router.post('/members', verifyToken, (req, res) => {
-  let userToFind = req.body;
-  User.find({pseudo: userToFind}).exec(function (err, member){
-    if(err){
-      console.log(err)
+router.get('/search', (req, res) => {
+  console.log('server')
+
+  var url = require('url');
+  var url_parts = url.parse(req.url, true);
+  var query = url_parts.query;
+  let userToFind = query['ml'];
+
+  console.log(userToFind)
+  User.find({pseudo: new RegExp(userToFind, "i")}).exec(function (err, result){
+    //console.log('recherche user')
+    if(result.length == 0){
+      console.log('erreur recherche')
     }else{
-      if(!member){
-        res.status(401).send('No user found with this pseudo')
-      }else{
-        console.log(member)
+      let data = [];
+      for (let i in result) {
+        let user = result[i];
+        data.push({
+          pseudo: user['pseudo']
+        });
       }
+      res.send(JSON.stringify(data))
     }
   })
 }); //end post members
@@ -575,9 +590,10 @@ function getFriends(res, criteria) {
   console.log('getFriends...');
   console.log(criteria);
 
-  Relationship.find(criteria).populate('userSource', 'email pseudo').populate('userTarget', 'email pseudo').exec(function (err, data) {
+  Relationship.find(criteria).populate('userSource', 'email pseudo avatar').populate('userTarget', 'email pseudo avatar').exec(function (err, data) {
     console.log('getFriends res...');
-    console.log(data);
+    console.log(data)
+    //console.log(data[0].userTarget.avatar);
     res.send(data);
   })
 }
@@ -632,7 +648,7 @@ router.get('/invitations', verifyToken, (req, res) => {
       $or: [{userSourceId: myId}, {userTargetId: myId}]
     }
 
-  Relationship.find(criteria).populate('userSource', 'email pseudo').populate('userTarget', 'email pseudo').exec(function (err, result) {
+  Relationship.find(criteria).populate('userSource', 'email pseudo avatar').populate('userTarget', 'email pseudo avatar').exec(function (err, result) {
     console.log('invitations res...');
     console.log(result);
 
@@ -646,6 +662,7 @@ router.get('/invitations', verifyToken, (req, res) => {
         data.push({
           pseudo: relationship.userTarget['pseudo'],
           email: relationship.userTarget['email'],
+          avatar: relationship.userTarget['avatar'],
           typeRelationship: 1,
           accepted: accepted
         });
@@ -654,6 +671,7 @@ router.get('/invitations', verifyToken, (req, res) => {
         data.push({
           pseudo: relationship.userSource['pseudo'],
           email: relationship.userSource['email'],
+          avatar: relationship.userSource['avatar'],
           typeRelationship: 2,
           accepted: accepted
         });
@@ -673,7 +691,7 @@ router.get('/invitations', verifyToken, (req, res) => {
 ////// UPLOAD /////
 var storage = multer.diskStorage({
   destination: function(req, file, cb){
-    cb(null, '/Users/admin/Documents/rsocial/socialNetwork/1_socialNetwork/src/assets/uploads')
+    cb(null, '/Users/admin/Documents/rsocial/socialNetwork/1_socialNetwork/src/assets/uploads/')
   },
   filename: function(req, file, cb){
     cb(null, file.originalname)
@@ -716,7 +734,7 @@ router.post('/register', (req, res) => {
     preferences: req.body.preferences,
     summary: req.body.summary,
     role: 1,
-    avatar: {path: "https://api.adorable.io/avatars/80/" + req.body.pseudo},
+    avatar: {path: "https://api.adorable.io/avatars/200/" + req.body.pseudo},
     _id: new mongoose.Types.ObjectId(),
   }//extract the user data from the object front
   let user = new User(userData)//convert the userData into the model we specified in mongoose
@@ -729,6 +747,10 @@ router.post('/register', (req, res) => {
     } else {
       let payload = {userId: registerUser._id}
       let token = jwt.sign(payload, 'thisIsASecretKey')
+      let subject = subscriptionSuccess.subject();
+      let message = subscriptionSuccess.message();
+      let email = userData.email;
+      mailer.sendEmail(subject, message, email)
       res.status(200).send({token})
     }
   })//end save method for register someone
@@ -755,8 +777,9 @@ router.post('/login', (req, res) => {
          user.comparePassword(userData.password, function(err, isMatch){
            if(isMatch && isMatch == true){
              let payload = {userId: user._id}
+             let pseudo =  user.pseudo;
              let token = jwt.sign(payload, 'thisIsASecretKey')
-             res.status(200).send({token})
+             res.status(200).send({token: token, pseudo: pseudo})
            }else{
              res.status(401).send('Invalid password')
            }
