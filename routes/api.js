@@ -2,8 +2,6 @@
 const express = require('express');
 const router = express.Router();
 const app = require('express')();
-const server = require('http').Server(app); //protocole http pour démarrer avec socket io
-const socket = require('socket.io')(server);
 const mongodb = require('mongodb');//call to store messages in the database
 
 ///// AUTHENTICATION / SECURITY /////
@@ -19,7 +17,7 @@ const db = "mongodb://Cotelette:a123456@ds141870.mlab.com:41870/socialnetwork"//
 const User = require('../models/user')//call the Schema for a new user
 const Wall = require('../models/wall')//call the Schema for a new user
 const Relationship = require('../models/relationship')//call the Schema for a new user
-const conversation = require('../models/conversation')// call the Schema for the conversation
+const Conversation = require('../models/conversation')// call the Schema for the conversation
 
 ///// SENDING MAIL /////
 const mailer = require('../mail/nodemailer');//generic function for sending emails
@@ -83,7 +81,9 @@ router.get('/home',  (req, res) => {
     })
     //console.log(result)
     //res.send(JSON.stringify({ result: result }))
+
   });
+
 });
 
 
@@ -97,99 +97,9 @@ router.get('/profil', verifyToken, (req, res) => {
 
     res.status(200).send(decoded);
   });
-  /*
-  let profil =
-      {
-        "email": "rourou@mail.com",
-        "password": "123",
-        "pseudo": "rourou",
-        "role": 1,
-        "avatar": "https://api.adorable.io/avatars/80/rourou"
-      }
-  res.json(profil)
-  */
-})
-
-//Events route
-router.get('/events', (req, res) => {
-  let event = [
-    {
-      "_id": "1",
-      "name": "Auto Expo",
-      "description": "lorem ipsum",
-      "date": "2018-05-21"
-    },
-    {
-      "_id": "2",
-      "name": "Auto Expo",
-      "description": "lorem ipsum",
-      "date": "2018-05-21"
-    },
-    {
-      "_id": "3",
-      "name": "Auto Expo",
-      "description": "lorem ipsum",
-      "date": "2018-05-21"
-    },
-    {
-      "_id": "4",
-      "name": "Auto Expo",
-      "description": "lorem ipsum",
-      "date": "2018-05-21"
-    }
-  ]
-  res.json(event)
-})
-
-//Special events route
-router.get('/special', verifyToken, (req, res) => {
-  let event = [
-    {
-      "_id": "1",
-      "name": "Auto Expo",
-      "description": "lorem ipsum",
-      "date": "2018-05-21"
-    },
-    {
-      "_id": "2",
-      "name": "Auto Expo",
-      "description": "lorem ipsum",
-      "date": "2018-05-21"
-    },
-    {
-      "_id": "3",
-      "name": "Auto Expo",
-      "description": "lorem ipsum",
-      "date": "2018-05-21"
-    },
-    {
-      "_id": "4",
-      "name": "Auto Expo",
-      "description": "lorem ipsum",
-      "date": "2018-05-21"
-    }
-  ]
-  res.json(event)
-});
-
-///ROUTE FOR MESSAGES
-router.get('/messages', (req, res) => {
-  res.status(200);
-  ///Connection to socket io
-  io.on('connection', function (socket) {
-    console.log('user connected');
-
-    socket.on('disconnect', function () {
-      console.log('User disconnected');
-    }); // end disconnect
-
-
-  });//end connection socket io
 })
 
 router.post('/wall', verifyToken, (req, res) => {
-
-  console.log('wall....');
 
   let o = req.body
   let token = req.headers.authorization.split(' ')[1]
@@ -199,8 +109,6 @@ router.post('/wall', verifyToken, (req, res) => {
     userSourceId: payload.userId,
     userSource: payload.userId,
   }
-
-  console.log(wallData);
 
   let wall = new Wall(wallData)
   wall.save((error, wallSaved) => {
@@ -297,7 +205,6 @@ router.get('/profile-wall', verifyToken, (req, res) => {
 
 function getInfos(res, criteriaInfos, myId) {
   User.findOne(criteriaInfos).exec(function (err, infos) {
-    console.log('User result...');
     let criteriaRelationship = {
       $or: [
         {$and: [{userSourceId: infos['_id']}, {userTargetId: myId}]},
@@ -306,8 +213,6 @@ function getInfos(res, criteriaInfos, myId) {
     };
 
     Relationship.findOne(criteriaRelationship).exec(function (err, relationship) {
-      console.log('Relationship result...');
-      console.log(relationship);
       let accepted = null;
       let typeRelationship = null;
 
@@ -341,7 +246,6 @@ function getInfos(res, criteriaInfos, myId) {
 }
 
 router.get('/profile-infos', verifyToken, (req, res) => {
-  console.log('profile-infos...');
   var url = require('url');
   var url_parts = url.parse(req.url, true);
   var query = url_parts.query;
@@ -409,14 +313,11 @@ router.get('/search', (req, res) => {
 
 
 router.post('/invite', verifyToken, (req, res) => {
-  console.log('invite...');
   let o = req.body
   let token = req.headers.authorization.split(' ')[1]
   let payload = jwt.verify(token, 'thisIsASecretKey')// return the decoded value only if it's valid
-  console.log(payload);
 
   User.findOne({pseudo: o.pseudo}).exec(function (err, infos) {
-    console.log('User.findOne res...');
     if (payload.userId == infos['_id']) {
       res.send({});
     } else {
@@ -456,15 +357,10 @@ router.post('/cancel-invitation', verifyToken, (req, res) => {
   let token = req.headers.authorization.split(' ')[1]
   let payload = jwt.verify(token, 'thisIsASecretKey')// return the decoded value only if it's valid
 
-  console.log('cancel-invitation...');
-
   User.findOne({pseudo: o.pseudo}).exec(function (err, infos) {
-    console.log('User.findOne res...');
     if (payload.userId == infos['_id']) {
-      console.log('test 1');
       res.send({});
     } else {
-      console.log('test 2');
 
       let criteriaRelationship = {
         $or: [
@@ -474,15 +370,11 @@ router.post('/cancel-invitation', verifyToken, (req, res) => {
       };
 
       Relationship.findOne(criteriaRelationship).exec(function (err, relationship) {
-        console.log('test 3');
 
         if (relationship == null) {
-          console.log('test 4');
           res.send({});
         } else {
-          console.log('test 5');
           Relationship.remove({_id: relationship._id}, function (err) {
-            console.log('test 6');
             res.send({});
 
           });
@@ -501,15 +393,10 @@ router.post('/accept-invitation', verifyToken, (req, res) => {
   let token = req.headers.authorization.split(' ')[1]
   let payload = jwt.verify(token, 'thisIsASecretKey')// return the decoded value only if it's valid
 
-  console.log('accept-invitation...');
-
   User.findOne({pseudo: o.pseudo}).exec(function (err, infos) {
-    console.log('User.findOne res...');
     if (payload.userId == infos['_id']) {
-      console.log('test 1');
       res.send({});
     } else {
-      console.log('test 2');
 
       let criteriaRelationship = {
         $or: [
@@ -519,15 +406,11 @@ router.post('/accept-invitation', verifyToken, (req, res) => {
       };
 
       Relationship.findOne(criteriaRelationship).exec(function (err, relationship) {
-        console.log('test 3');
 
         if (relationship == null) {
-          console.log('test 4');
           res.send({});
         } else {
-          console.log('test 5');
           Relationship.update({_id: relationship._id}, {$set: {accepted: true}}, function (err) {
-            console.log('test 6');
             res.send({});
 
           });
@@ -546,16 +429,10 @@ router.post('/delete-relationship', verifyToken, (req, res) => {
   let token = req.headers.authorization.split(' ')[1]
   let payload = jwt.verify(token, 'thisIsASecretKey')// return the decoded value only if it's valid
 
-  console.log('delete-relationship...');
-
   User.findOne({pseudo: o.pseudo}).exec(function (err, infos) {
-    console.log('User.findOne res...');
     if (payload.userId == infos['_id']) {
-      console.log('test 1');
       res.send({});
     } else {
-      console.log('test 2');
-
       let criteriaRelationship = {
         $or: [
           {$and: [{userSourceId: infos['_id']}, {userTargetId: payload.userId}]},
@@ -564,15 +441,11 @@ router.post('/delete-relationship', verifyToken, (req, res) => {
       };
 
       Relationship.findOne(criteriaRelationship).exec(function (err, relationship) {
-        console.log('test 3');
 
         if (relationship == null) {
-          console.log('test 4');
           res.send({});
         } else {
-          console.log('test 5');
           Relationship.remove({_id: relationship._id}, function (err) {
-            console.log('test 6');
             res.send({});
 
           });
@@ -594,12 +467,12 @@ function getFriends(res, criteria) {
     console.log('getFriends res...');
     console.log(data)
     //console.log(data[0].userTarget.avatar);
+
     res.send(data);
   })
 }
 
 router.get('/friends', verifyToken, (req, res) => {
-  console.log('friends...');
   var url = require('url');
   var url_parts = url.parse(req.url, true);
   var query = url_parts.query;
@@ -609,9 +482,7 @@ router.get('/friends', verifyToken, (req, res) => {
 
   let criteria = {};
   if (query['pseudo'] != undefined) {
-    console.log('friends... 1');
     User.findOne({pseudo: query['pseudo']}).exec(function (err, infos) {
-      console.log('friends... 2');
       // criteria = {$or: [{userSourceId: infos['_id']}, {userTargetId: infos['_id']}]};
       criteria = {
         $and: [
@@ -622,7 +493,6 @@ router.get('/friends', verifyToken, (req, res) => {
       getFriends(res, criteria);
     });
   } else {
-    console.log('friends... 3');
     // criteria = {$or: [{userSourceId: payload.userId}, {userTargetId: payload.userId}]};
     criteria = {
       $and: [
@@ -636,9 +506,6 @@ router.get('/friends', verifyToken, (req, res) => {
 
 
 router.get('/invitations', verifyToken, (req, res) => {
-  console.log('friends...');
-
-
   let token = req.headers.authorization.split(' ')[1]
   let payload = jwt.verify(token, 'thisIsASecretKey')// return the decoded value only if it's valid
   let myId = payload.userId;
@@ -651,6 +518,7 @@ router.get('/invitations', verifyToken, (req, res) => {
   Relationship.find(criteria).populate('userSource', 'email pseudo avatar').populate('userTarget', 'email pseudo avatar').exec(function (err, result) {
     console.log('invitations res...');
     console.log(result);
+
 
     let data = [];
     for (let i in result) {
@@ -679,9 +547,6 @@ router.get('/invitations', verifyToken, (req, res) => {
       }
 
     }
-    console.log('----');
-    console.log(data);
-
     res.send(data);
   })
 
@@ -701,8 +566,6 @@ var storage = multer.diskStorage({
 var upload = multer({ storage: storage })
 
 router.post('/upload', verifyToken, upload.single('image'), function(req, res, next) {
-  console.log(req.userId)
-  console.log(req.file.path)
   User.findOneAndUpdate({_id: req.userId}, {
     avatar: {
       path: req.file.originalname
@@ -724,7 +587,6 @@ router.post('/upload', verifyToken, upload.single('image'), function(req, res, n
 
 //API FOR REGISTER
 router.post('/register', (req, res) => {
-  console.log(req.body)
   let userData = {
     email: req.body.email,
     password: req.body.password,
@@ -748,13 +610,14 @@ router.post('/register', (req, res) => {
 
       }
     } else {
-      let payload = {userId: registerUser._id}
+      let payload = {userId: registerUser._id, pseudo: req.body.pseudo}
       let token = jwt.sign(payload, 'thisIsASecretKey')
       let subject = subscriptionSuccess.subject();
       let message = subscriptionSuccess.message();
       let email = userData.email;
       mailer.sendEmail(subject, message, email)
       res.status(200).send({token})
+
     }
   })//end save method for register someone
 })//end post for register method
@@ -763,8 +626,10 @@ router.post('/register', (req, res) => {
 
 //API FOR LOGIN
 router.post('/login', (req, res) => {
-  //console.log('pas cassé')
+  console.log('### [/api/login] >>');
+
   let userData = req.body//extract the user data when submitted
+  console.log(userData);
 
   User.findOne({// searching in the database for a user
     email: userData.email
@@ -775,14 +640,13 @@ router.post('/login', (req, res) => {
       if (!user) {//check if the user exists
         res.status(401).send('Invalid email')
       } else {
-        console.log(userData)
         ///////MODIF WITH Hash
          user.comparePassword(userData.password, function(err, isMatch){
            if(isMatch && isMatch == true){
-             let payload = {userId: user._id}
-             let pseudo =  user.pseudo;
+
+             let payload = {userId: user._id, pseudo: user.pseudo}
              let token = jwt.sign(payload, 'thisIsASecretKey')
-             res.status(200).send({token: token, pseudo: pseudo})
+             res.status(200).send({ token: token, pseudo: user.pseudo })
            }else{
              res.status(401).send('Invalid password')
            }
@@ -846,6 +710,28 @@ router.post('/send', (req, res) => {
 
 
 ///
+//
+// router.post('/chat-message', verifyToken, (req, res) => {
+//   console.log('chat-message...');
+//
+//   let o = req.body
+//   let token = req.headers.authorization.split(' ')[1]
+//   let payload = jwt.verify(token, 'thisIsASecretKey')// return the decoded value only if it's valid
+//
+//   let placeType = o.placeType;
+//   let placeName = o.placeName;
+//   let message = o.message;
+//
+//   if(placeType == 'room' && placeName== 'default') {
+//     io.emit('message', '{ placeType: "'+placeType+'", placeName: "'+placeName+'", message: "'+message+'" }');
+//
+//   } else {
+//
+//   }
+//
+//   console.log(o.message);
+//
+// });
 
 
 module.exports = router;
