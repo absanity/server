@@ -1,7 +1,11 @@
 const mongoose = require('mongoose');
-
-const Schema = mongoose.Schema
+const Schema = mongoose.Schema;
 const conversationSchema = new Schema({
+  message: {
+    type: String,
+    required: true,
+    trim: true
+  },
   created:  {
     type: Date,
     default: Date.now
@@ -19,7 +23,7 @@ const conversationSchema = new Schema({
   userSource: { type: Schema.Types.ObjectId, ref: 'user', default: null },
   userTarget: { type: Schema.Types.ObjectId, ref: 'user', default: null },
 
+
 }, { collection: 'conversation' });
 
-const Conversation = mongoose.model('conversation', conversationSchema)
-module.exports = Conversation
+module.exports = mongoose.model('Conversation', conversationSchema);
