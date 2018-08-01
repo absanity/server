@@ -12,7 +12,7 @@ const nodemailer = require('nodemailer');
                 pass: 'meowRS55' // password used by the social network
             },
 /////////////!/ REMOVE THIS BEFORE PUSHING TO PROD //////////////////////
-            tls:{ rejectUnauthorized:false  }
+      //      tls:{ rejectUnauthorized:false  }
 ////////////////////////////////////////////////////////////////////////
         });//end create transport
         let mailOptions = {
