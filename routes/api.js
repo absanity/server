@@ -755,9 +755,12 @@ router.post('/upload', verifyToken, upload.single('image'), function(req, res, n
 
 ///// API FOR REGISTER /////
 router.post('/register', (req, res) => {
+<<<<<<< HEAD
 
   console.log("################# REGISTER #######################");
 
+=======
+>>>>>>> cb09558124b675a916da8e75dfe3530e66a3ae48
   let userData = {
     email: req.body.email,
     password: req.body.password,
