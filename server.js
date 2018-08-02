@@ -36,13 +36,13 @@ app.get('/', function (req, res) {
   res.send('Cotelette is here')
 });
 
-app.use('/uploads', express.static(__dirname + '/uploads/'));
+app.use('/api/uploads', express.static(__dirname + '/uploads/'));
 
 ///CONFIGURATION FOR THE CHAT EXCHANGES///
 // Allowing cross-origin sites to make requests to this API
 app.use((req, res, next) => {
-  // res.append('Access-Control-Allow-Origin', 'http://audreyrocher.com');
-  res.append('Access-Control-Allow-Origin', 'http://192.168.160.133:4200');
+  res.append('Access-Control-Allow-Origin', 'http://audreyrocher.com');
+  // res.append('Access-Control-Allow-Origin', 'http://192.168.160.133:4200');
   res.append('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
   res.append("Access-Control-Allow-Headers", "Origin, Accept,Access-Control-Allow-Headers, Origin,Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers");
   res.append('Access-Control-Allow-Credentials', true);
